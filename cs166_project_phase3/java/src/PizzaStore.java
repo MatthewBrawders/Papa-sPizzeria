@@ -362,8 +362,31 @@ public class PizzaStore {
     * @return User login or null is the user does not exist
     **/
    public static String LogIn(PizzaStore esql){
-      return null;
-   }//end
+      
+     try {
+        System.out.print("Enter Username: ");
+        String login = in.readLine();
+        System.out.print("Enter Password: ");
+        String password = in.readLine();
+        
+        String query = String.format(
+            "SELECT * FROM Users WHERE login='%s' AND password='%s'",
+            login, password
+        );
+        
+        int userCount = esql.executeQuery(query);
+        if (userCount > 0) {
+            System.out.println("Login successful!");
+            return login; // Return the logged-in user's login
+        } else {
+            System.out.println("Invalid login credentials.");
+            return null;
+        }
+    } catch (Exception e) {
+        System.err.println(e.getMessage());
+        return null;
+    }
+}
 
 // Rest of the functions definition go in here
 
