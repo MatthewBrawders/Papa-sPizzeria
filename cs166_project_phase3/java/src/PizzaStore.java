@@ -491,93 +491,87 @@ public class PizzaStore {
    
    public static void updateProfile(PizzaStore esql, String authorisedUser) {
       try {
-  
-          // Fetch the current profile information to show the user (optional)
-          String query = String.format("SELECT * FROM Users WHERE login = '%s';", authorisedUser);
-          esql.executeQuery(query); // Run the query to get current user details
-          // Optional: Fetch and display current user information (You can also use a ResultSet)
-          // Example: If found, display current profile
-  
-          System.out.println("Current profile details: ");
-          // Display current profile information (e.g., using a ResultSet to get the user's details)
-          // Sample: "login: currentLogin, phoneNum: currentPhoneNum, favoriteItems: currentFavoriteItems"
-          
-          // Ask for new values to update
-          System.out.println("Enter new password (Leave blank to keep the same): ");
-          String newPassword = in.readLine();
-  
-          System.out.println("Enter new phone number (Leave blank to keep the same): ");
-          String newPhoneNum = in.readLine();
-  
-          System.out.println("Enter new favorite items (Leave blank to keep the same): ");
-          String newFavoriteItems = in.readLine();
-  
-          // Construct the SQL update query, only updating fields that are not blank
-          String updateQuery = "UPDATE Users SET ";
-          boolean first = true;
-  
-          if (newPassword != null && !newPassword.isEmpty()) {
-              updateQuery += "password = '" + newPassword + "'";
-              first = false;
-          }
-  
-          if (newPhoneNum != null && !newPhoneNum.isEmpty()) {
-              if (!first) updateQuery += ", ";
-              updateQuery += "phoneNum = '" + newPhoneNum + "'";
-              first = false;
-          }
-  
-          if (newFavoriteItems != null && !newFavoriteItems.isEmpty()) {
-              if (!first) updateQuery += ", ";
-              updateQuery += "favoriteItems = '" + newFavoriteItems + "'";
-          }
-  
-          // Close the update statement
-          updateQuery += " WHERE login = '" + currentLogin + "';";
-  
-          // Execute the query to update the user profile in the database
-          esql.executeUpdate(updateQuery);
-  
-          System.out.println("Your profile has been successfully updated.");
-          
+         // Fetch the current profile information to show the user
+         String query = String.format("SELECT * FROM Users WHERE login='%s';", authorisedUser);
+         List<List<String>> currentDetails = esql.executeQueryAndReturnResult(query);
+   
+         // Display current profile details
+         if (!currentDetails.isEmpty()) {
+            System.out.println("Current Profile Details:");
+            System.out.println("Password: " + currentDetails.get(0).get(1));
+            System.out.println("Phone Number: " + currentDetails.get(0).get(4));
+            System.out.println("Favorite Items: " + currentDetails.get(0).get(3));
+         } else {
+            System.out.println("No profile found for the user.");
+            return;
+         }
+   
+         // Prompt user for new values
+         System.out.print("Enter new password (Leave blank to keep the same): ");
+         String newPassword = in.readLine();
+   
+         System.out.print("Enter new phone number (Leave blank to keep the same): ");
+         String newPhoneNum = in.readLine();
+   
+         System.out.print("Enter new favorite items (Leave blank to keep the same): ");
+         String newFavoriteItems = in.readLine();
+   
+         // Construct the SQL update query
+         String updateQuery = "UPDATE Users SET ";
+         boolean first = true;
+   
+         if (newPassword != null && !newPassword.isEmpty()) {
+            updateQuery += "password = '" + newPassword + "'";
+            first = false;
+         }
+   
+         if (newPhoneNum != null && !newPhoneNum.isEmpty()) {
+            if (!first) updateQuery += ", ";
+            updateQuery += "phoneNum = '" + newPhoneNum + "'";
+            first = false;
+         }
+   
+         if (newFavoriteItems != null && !newFavoriteItems.isEmpty()) {
+            if (!first) updateQuery += ", ";
+            updateQuery += "favoriteItems = '" + newFavoriteItems + "'";
+         }
+   
+         updateQuery += String.format(" WHERE login='%s';", authorisedUser);
+   
+         // Execute the query
+         esql.executeUpdate(updateQuery);
+         System.out.println("Profile updated successfully!");
+   
       } catch (Exception e) {
-          System.err.println("Error updating profile: " + e.getMessage());
+         System.err.println("Error updating profile: " + e.getMessage());
       }
    }
+   
 
    public static void viewMenu(PizzaStore esql) {
       try {
-         // Step 1: Query the Items table to get all the items
          String query = "SELECT itemName, ingredients, typeOfItem, price, description FROM Items;";
          List<List<String>> results = esql.executeQueryAndReturnResult(query);
-
-         // Step 2: Check if there are items in the menu
+   
          if (results.isEmpty()) {
-               System.out.println("The menu is empty. No items available.");
-               return;
+            System.out.println("The menu is empty. No items available.");
+            return;
          }
-
-         // Step 3: Display the menu items
+   
          System.out.println("---- Menu ----");
          for (List<String> item : results) {
-               String itemName = item.get(0);
-               String ingredients = item.get(1);
-               String typeOfItem = item.get(2);
-               String price = item.get(3);
-               String description = item.get(4);
-
-               System.out.println("Item Name: " + itemName);
-               System.out.println("Ingredients: " + ingredients);
-               System.out.println("Type: " + typeOfItem);
-               System.out.println("Price: $" + price);
-               System.out.println("Description: " + description);
-               System.out.println("-----------------------");
+            System.out.println("Item Name: " + item.get(0));
+            System.out.println("Ingredients: " + item.get(1));
+            System.out.println("Type: " + item.get(2));
+            System.out.println("Price: $" + item.get(3));
+            System.out.println("Description: " + item.get(4));
+            System.out.println("-----------------------");
          }
-
+   
       } catch (Exception e) {
          System.err.println("Error displaying the menu: " + e.getMessage());
       }
-   }
+   }   
 
 
    public static void placeOrder(PizzaStore esql) {}
