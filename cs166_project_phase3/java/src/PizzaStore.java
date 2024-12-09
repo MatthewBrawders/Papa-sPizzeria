@@ -363,7 +363,7 @@ public class PizzaStore {
 
       BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
-      System.out.print("Thank you for creating a User at Papa's Pizzaria! What do you want your Username to be?\n");
+      System.out.print("Thank you for creating a User at Papa's Pizzeria! What do you want your Username to be?\n");
       do {
          System.out.print("Username: ");
          try {
