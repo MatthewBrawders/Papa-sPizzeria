@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.ArrayList;
 import java.lang.Math;
+import java.util.Scanner;
 
 /**
  * This class defines a simple embedded SQL utility class that is designed to
@@ -615,7 +616,50 @@ public class PizzaStore {
       }
    }
 
-   public static void updateOrderStatus(PizzaStore esql, String authorisedUser) {}
+   public static void updateOrderStatus(PizzaStore esql, String login) {
+      // Use a single Scanner object for the whole program if tied to System.in
+      Scanner scanner = new Scanner(System.in);  // Create Scanner object for input
+  
+      try {
+          // Query to check the user's role
+          String roleQuery = "SELECT role FROM Users WHERE login = '" + login + "';";
+          List<List<String>> roleResult = esql.executeQueryAndReturnResult(roleQuery);
+  
+          if (roleResult.isEmpty()) {
+              System.out.println("Invalid login.");
+              return;  // Exit method cleanly
+          }
+  
+          // Get the role of the user
+          String role = roleResult.get(0).get(0).trim();
+  
+          if (!"manager".equalsIgnoreCase(role) && !"driver".equalsIgnoreCase(role)) {
+              System.out.println("Access denied. Only managers and drivers can update orders.");
+              return;  // Exit method cleanly
+          }
+  
+          // Get the order ID and the new status
+          System.out.print("Enter the Order ID to update: ");
+          int orderID = Integer.parseInt(scanner.nextLine().trim());
+  
+          System.out.print("Enter the new status for this order: ");
+          String newStatus = scanner.nextLine().trim();
+  
+          // Form the update query to change the order status
+          String updateQuery = "UPDATE FoodOrder SET orderStatus = '" + newStatus.replace("'", "''") + "' WHERE orderID = " + orderID + ";";
+  
+          // Execute the update query
+          esql.executeUpdate(updateQuery);
+  
+          // Provide feedback to the user
+          System.out.println("Order status updated successfully.");
+      } catch (NumberFormatException e) {
+          System.out.println("Invalid input. Order ID must be a number.");
+      } catch (Exception e) {
+          System.out.println("Error: " + e.getMessage());
+      }
+  }
+  
 
    public static void updateMenu(PizzaStore esql, String authorisedUser) {
       try {
@@ -828,8 +872,6 @@ public class PizzaStore {
          e.printStackTrace();
       }
    }
-
-
 
 }//end Papa's Pizzaria
 
