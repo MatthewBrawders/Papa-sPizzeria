@@ -296,9 +296,9 @@ public class PizzaStore {
                    case 6: viewRecentOrders(esql); break;
                    case 7: viewOrderInfo(esql); break;
                    case 8: viewStores(esql); break;
-                   case 9: updateOrderStatus(esql); break;
-                   case 10: updateMenu(esql); break;
-                   case 11: updateUser(esql); break;
+                   case 9: updateOrderStatus(esql, authorisedUser); break;
+                   case 10: updateMenu(esql, authorisedUser); break;
+                   case 11: updateUser(esql, authorisedUser); break;
 
 
 
@@ -578,10 +578,257 @@ public class PizzaStore {
    public static void viewAllOrders(PizzaStore esql) {}
    public static void viewRecentOrders(PizzaStore esql) {}
    public static void viewOrderInfo(PizzaStore esql) {}
-   public static void viewStores(PizzaStore esql) {}
-   public static void updateOrderStatus(PizzaStore esql) {}
-   public static void updateMenu(PizzaStore esql) {}
-   public static void updateUser(PizzaStore esql) {}
+
+
+   public static void viewStores(PizzaStore esql) {
+      try {
+         // Step 1: Query the Store table to get all the store details
+         String query = "SELECT storeID, address, city, state, isOpen, reviewScore FROM Store;";
+         List<List<String>> results = esql.executeQueryAndReturnResult(query);
+   
+         // Step 2: Check if there are any stores
+         if (results.isEmpty()) {
+            System.out.println("No stores found in the database.");
+            return;
+         }
+   
+         // Step 3: Display the store details
+         System.out.println("---- Store List ----");
+         for (List<String> store : results) {
+            String storeID = store.get(0);
+            String address = store.get(1);
+            String city = store.get(2);
+            String state = store.get(3);
+            String isOpen = store.get(4);
+            String reviewScore = store.get(5) == null ? "N/A" : store.get(5);
+   
+            System.out.println("Store ID: " + storeID);
+            System.out.println("Address: " + address);
+            System.out.println("City: " + city);
+            System.out.println("State: " + state);
+            System.out.println("Is Open: " + isOpen);
+            System.out.println("Review Score: " + reviewScore);
+            System.out.println("-----------------------");
+         }
+      } catch (Exception e) {
+         System.err.println("Error displaying stores: " + e.getMessage());
+      }
+   }
+
+   public static void updateOrderStatus(PizzaStore esql, String authorisedUser) {}
+
+   public static void updateMenu(PizzaStore esql, String authorisedUser) {
+      try {
+         // Step 1: Check if the authorisedUser is a manager
+         String roleQuery = String.format("SELECT role FROM Users WHERE login='%s';", authorisedUser);
+         List<List<String>> roleResult = esql.executeQueryAndReturnResult(roleQuery);
+   
+         if (roleResult.isEmpty() || !"manager".equalsIgnoreCase(roleResult.get(0).get(0).trim())) {
+            System.out.println("Access denied. Only managers can update the menu.");
+            return;
+         }
+   
+         // Step 2: Display the current menu for reference
+         String menuQuery = "SELECT itemName, ingredients, typeOfItem, price, description FROM Items;";
+         List<List<String>> menuItems = esql.executeQueryAndReturnResult(menuQuery);
+   
+         System.out.println("---- Current Menu ----");
+         for (List<String> item : menuItems) {
+            System.out.println("Item Name: " + item.get(0));
+            System.out.println("Ingredients: " + item.get(1));
+            System.out.println("Type: " + item.get(2));
+            System.out.println("Price: $" + item.get(3));
+            System.out.println("Description: " + item.get(4));
+            System.out.println("-----------------------");
+         }
+   
+         // Step 3: Allow manager to update menu items
+         System.out.println("Do you want to update an existing item or add a new item?");
+         System.out.println("1. Update an existing item");
+         System.out.println("2. Add a new item");
+         int choice = readChoice();
+   
+         if (choice == 1) {
+            // Update an existing menu item
+            System.out.print("Enter the name of the item you want to update: ");
+            String itemName = in.readLine().trim();
+   
+            // Validate if the item exists
+            String validateQuery = String.format("SELECT * FROM Items WHERE itemName = '%s';", itemName.replace("'", "''"));
+            int itemCount = esql.executeQuery(validateQuery);
+   
+            if (itemCount == 0) {
+               System.out.println("No item found with the provided name.");
+               return;
+            }
+   
+            System.out.print("Enter the new ingredients (Leave blank to keep the same): ");
+            String newIngredients = in.readLine().trim().replace("'", "''");
+   
+            System.out.print("Enter the new type of item (Leave blank to keep the same): ");
+            String newType = in.readLine().trim().replace("'", "''");
+   
+            System.out.print("Enter the new price (Leave blank to keep the same): ");
+            String newPrice = in.readLine().trim();
+   
+            System.out.print("Enter the new description (Leave blank to keep the same): ");
+            String newDescription = in.readLine().trim().replace("'", "''");
+   
+            StringBuilder updateQuery = new StringBuilder("UPDATE Items SET ");
+            boolean changed = false;
+   
+            if (!newIngredients.isEmpty()) {
+               updateQuery.append("ingredients = '").append(newIngredients).append("'");
+               changed = true;
+            }
+   
+            if (!newType.isEmpty()) {
+               if (changed) updateQuery.append(", ");
+               updateQuery.append("typeOfItem = '").append(newType).append("'");
+               changed = true;
+            }
+   
+            if (!newPrice.isEmpty()) {
+               if (changed) updateQuery.append(", ");
+               updateQuery.append("price = ").append(newPrice);
+               changed = true;
+            }
+   
+            if (!newDescription.isEmpty()) {
+               if (changed) updateQuery.append(", ");
+               updateQuery.append("description = '").append(newDescription).append("'");
+               changed = true;
+            }
+   
+            if (!changed) {
+               System.out.println("No updates were made. All fields were left blank.");
+               return;
+            }
+   
+            updateQuery.append(" WHERE itemName = '").append(itemName.replace("'", "''")).append("';");
+   
+            esql.executeUpdate(updateQuery.toString());
+            System.out.println("Item updated successfully!");
+         } else if (choice == 2) {
+            // Add a new menu item
+            System.out.print("Enter the name of the new item: ");
+            String name = in.readLine().trim().replace("'", "''");
+   
+            System.out.print("Enter the ingredients of the new item: ");
+            String ingredients = in.readLine().trim().replace("'", "''");
+   
+            System.out.print("Enter the type of the new item: ");
+            String type = in.readLine().trim().replace("'", "''");
+   
+            System.out.print("Enter the price of the new item: ");
+            String price = in.readLine().trim();
+   
+            System.out.print("Enter the description of the new item: ");
+            String description = in.readLine().trim().replace("'", "''");
+   
+            if (name.isEmpty() || ingredients.isEmpty() || type.isEmpty() || price.isEmpty() || description.isEmpty()) {
+               System.out.println("All fields are required to add a new item.");
+               return;
+            }
+   
+            String insertQuery = String.format(
+               "INSERT INTO Items (itemName, ingredients, typeOfItem, price, description) VALUES ('%s', '%s', '%s', %s, '%s');",
+               name, ingredients, type, price, description
+            );
+   
+            esql.executeUpdate(insertQuery);
+            System.out.println("New item added successfully!");
+         } else {
+            System.out.println("Invalid choice. Returning to menu.");
+         }
+   
+      } catch (Exception e) {
+         System.err.println("Error updating menu: " + e.getMessage());
+         e.printStackTrace();
+      }
+   }
+
+   public static void updateUser(PizzaStore esql, String authorisedUser) {
+      try {
+         // Step 1: Check if the authorisedUser is a manager
+         String roleQuery = String.format("SELECT role FROM Users WHERE login='%s';", authorisedUser);
+         List<List<String>> roleResult = esql.executeQueryAndReturnResult(roleQuery);
+
+         if (roleResult.isEmpty() || !"manager".equalsIgnoreCase(roleResult.get(0).get(0).trim())) {
+            System.out.println("Access denied. Only managers can update user details.");
+            return;
+         }
+
+         // Step 2: Allow manager to select a user to update
+         System.out.print("Enter the username of the user you want to update: ");
+         String targetUser = in.readLine().trim();
+
+         // Validate if the user exists
+         String validateQuery = String.format("SELECT * FROM Users WHERE login = '%s';", targetUser.replace("'", "''"));
+         int userCount = esql.executeQuery(validateQuery);
+
+         if (userCount == 0) {
+            System.out.println("No user found with the provided username.");
+            return;
+         }
+
+         // Step 3: Prompt for updates
+         System.out.print("Enter the new password (Leave blank to keep the same): ");
+         String newPassword = in.readLine().trim().replace("'", "''");
+
+         System.out.print("Enter the new role (Leave blank to keep the same): ");
+         String newRole = in.readLine().trim().replace("'", "''");
+
+         System.out.print("Enter the new favorite items (Leave blank to keep the same): ");
+         String newFavoriteItems = in.readLine().trim().replace("'", "''");
+
+         System.out.print("Enter the new phone number (Leave blank to keep the same): ");
+         String newPhoneNum = in.readLine().trim().replace("'", "''");
+
+         // Step 4: Construct the update query
+         StringBuilder updateQuery = new StringBuilder("UPDATE Users SET ");
+         boolean changed = false;
+
+         if (!newPassword.isEmpty()) {
+            updateQuery.append("password = '").append(newPassword).append("'");
+            changed = true;
+         }
+
+         if (!newRole.isEmpty()) {
+            if (changed) updateQuery.append(", ");
+            updateQuery.append("role = '").append(newRole).append("'");
+            changed = true;
+         }
+
+         if (!newFavoriteItems.isEmpty()) {
+            if (changed) updateQuery.append(", ");
+            updateQuery.append("favoriteItems = '").append(newFavoriteItems).append("'");
+            changed = true;
+         }
+
+         if (!newPhoneNum.isEmpty()) {
+            if (changed) updateQuery.append(", ");
+            updateQuery.append("phoneNum = '").append(newPhoneNum).append("'");
+            changed = true;
+         }
+
+         if (!changed) {
+            System.out.println("No updates were made. All fields were left blank.");
+            return;
+         }
+
+         updateQuery.append(" WHERE login = '").append(targetUser.replace("'", "''")).append("';");
+
+         // Step 5: Execute the update query
+         esql.executeUpdate(updateQuery.toString());
+         System.out.println("User updated successfully!");
+
+      } catch (Exception e) {
+         System.err.println("Error updating user: " + e.getMessage());
+         e.printStackTrace();
+      }
+   }
+
 
 
 }//end PizzaStore
