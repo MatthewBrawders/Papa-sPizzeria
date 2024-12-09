@@ -19,6 +19,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.List;
@@ -353,8 +354,80 @@ public class PizzaStore {
    /*
     * Creates a new user
     **/
-   public static void CreateUser(PizzaStore esql){
-   }//end CreateUser
+   public static void CreateUser(PizzaStore esql) {
+      String login;
+      String password;
+      String role = "customer";
+      String favoriteItems;
+      String phoneNum;
+
+      BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+
+      System.out.print("Thank you for creating a User at Papa's Pizzaria! What do you want your Username to be?\n");
+      do {
+         System.out.print("Username: ");
+         try {
+               login = in.readLine();
+               if (login.trim().isEmpty() || login.length() > 50) {
+                  System.out.println("Woah there! Is there any way you can create a different username? Please try again.\n");
+               } else {
+                  break;
+               }
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      System.out.print("Cool name! What do you want your password to be?\n");
+      do {
+         System.out.print("Password: ");
+         try {
+               password = in.readLine();
+               if (password.trim().isEmpty() || password.length() > 30) {
+                  System.out.println("Sorry, that password is invalid. Please try again!\n");
+               } else {
+                  break;
+               }
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      System.out.print("That's a very safe password! Now we would like to know ourselves... What's your favorite item on our menu?\n");
+      do {
+         System.out.print("Favorite Item: ");
+         try {
+               favoriteItems = in.readLine();
+               break;
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      System.out.print("Lastly, all we need is your phone number to send you discounts and deals!\n");
+      do {
+         System.out.print("Phone Number: ");
+         try {
+               phoneNum = in.readLine();
+               if (phoneNum.trim().isEmpty() || phoneNum.length() > 20) {
+                  System.out.println("That doesn't seem right. Please try again.\n");
+               } else {
+                  break;
+               }
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      try {
+         String query = "INSERT INTO Users (login, password, role, favoriteItems, phoneNum) VALUES ('" + login + "', '" + password + "', '" + role + "', '" + favoriteItems + "', '" + phoneNum + "');";
+         esql.executeUpdate(query);
+         System.out.println("User created successfully!");
+      } catch (Exception e) {
+         System.err.println("Error inserting user into database: " + e.getMessage());
+      }
+   }
+
 
 
    /*
@@ -362,8 +435,31 @@ public class PizzaStore {
     * @return User login or null is the user does not exist
     **/
    public static String LogIn(PizzaStore esql){
-      return null;
-   }//end
+      try {
+            System.out.print("Enter Username: ");
+            String login = in.readLine();
+
+            System.out.print("Enter Password: ");
+            String password = in.readLine();
+
+            String query = String.format("SELECT * FROM Users WHERE login='%s' AND password='%s'", login, password);
+            int userCount = esql.executeQuery(query);
+
+            if (userCount > 0) {
+               System.out.println("Login successful!");
+               return login; // Return the logged-in user's login
+            } 
+            else {
+               System.out.println("Invalid login credentials.");
+               return null;
+            }
+
+         }catch (Exception e) {
+               System.err.println(e.getMessage());
+               return null;
+            }
+            
+   }
 
 // Rest of the functions definition go in here
 
