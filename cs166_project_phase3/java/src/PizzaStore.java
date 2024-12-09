@@ -10,6 +10,8 @@
  *
  */
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import java.sql.DriverManager;
 import java.sql.Connection;
@@ -19,6 +21,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.List;
@@ -287,10 +290,10 @@ public class PizzaStore {
                 System.out.println(".........................");
                 System.out.println("20. Log out");
                 switch (readChoice()){
-                   case 1: viewProfile(esql); break;
+                   case 1: viewProfile(esql, authorisedUser); break;
                    case 2: updateProfile(esql); break;
                    case 3: viewMenu(esql); break;
-                   case 4: placeOrder(esql); break;
+                   case 4: placeOrder(esql, authorisedUser); break;
                    case 5: viewAllOrders(esql); break;
                    case 6: viewRecentOrders(esql); break;
                    case 7: viewOrderInfo(esql); break;
@@ -353,8 +356,80 @@ public class PizzaStore {
    /*
     * Creates a new user
     **/
-   public static void CreateUser(PizzaStore esql){
-   }//end CreateUser
+   public static void CreateUser(PizzaStore esql) {
+      String login;
+      String password;
+      String role = "customer";
+      String favoriteItems;
+      String phoneNum;
+
+      BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+
+      System.out.print("Thank you for creating a User at Papa's Pizzeria! What do you want your Username to be?\n");
+      do {
+         System.out.print("Username: ");
+         try {
+               login = in.readLine();
+               if (login.trim().isEmpty() || login.length() > 50) {
+                  System.out.println("Woah there! Is there any way you can create a different username? Please try again.\n");
+               } else {
+                  break;
+               }
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      System.out.print("Cool name! What do you want your password to be?\n");
+      do {
+         System.out.print("Password: ");
+         try {
+               password = in.readLine();
+               if (password.trim().isEmpty() || password.length() > 30) {
+                  System.out.println("Sorry, that password is invalid. Please try again!\n");
+               } else {
+                  break;
+               }
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      System.out.print("That's a very safe password! Now we would like to know ourselves... What's your favorite item on our menu?\n");
+      do {
+         System.out.print("Favorite Item: ");
+         try {
+               favoriteItems = in.readLine();
+               break;
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      System.out.print("Lastly, all we need is your phone number to send you discounts and deals!\n");
+      do {
+         System.out.print("Phone Number: ");
+         try {
+               phoneNum = in.readLine();
+               if (phoneNum.trim().isEmpty() || phoneNum.length() > 20) {
+                  System.out.println("That doesn't seem right. Please try again.\n");
+               } else {
+                  break;
+               }
+         } catch (IOException e) {
+               System.out.println("An error occurred while reading your input. Please try again.");
+         }
+      } while (true);
+
+      try {
+         String query = "INSERT INTO Users (login, password, role, favoriteItems, phoneNum) VALUES ('" + login + "', '" + password + "', '" + role + "', '" + favoriteItems + "', '" + phoneNum + "');";
+         esql.executeUpdate(query);
+         System.out.println("User created successfully!");
+      } catch (Exception e) {
+         System.err.println("Error inserting user into database: " + e.getMessage());
+      }
+   }
+
 
 
    /*
@@ -362,38 +437,122 @@ public class PizzaStore {
     * @return User login or null is the user does not exist
     **/
    public static String LogIn(PizzaStore esql){
-      
-     try {
-        System.out.print("Enter Username: ");
-        String login = in.readLine();
-        System.out.print("Enter Password: ");
-        String password = in.readLine();
-        
-        String query = String.format(
-            "SELECT * FROM Users WHERE login='%s' AND password='%s'",
-            login, password
-        );
-        
-        int userCount = esql.executeQuery(query);
-        if (userCount > 0) {
-            System.out.println("Login successful!");
-            return login; // Return the logged-in user's login
-        } else {
-            System.out.println("Invalid login credentials.");
-            return null;
-        }
-    } catch (Exception e) {
-        System.err.println(e.getMessage());
-        return null;
-    }
-}
+      try {
+            System.out.print("Enter Username: ");
+            String login = in.readLine();
+
+            System.out.print("Enter Password: ");
+            String password = in.readLine();
+
+            String query = String.format("SELECT * FROM Users WHERE login='%s' AND password='%s'", login, password);
+            int userCount = esql.executeQuery(query);
+
+            if (userCount > 0) {
+               System.out.println("Login successful!");
+               return login; // Return the logged-in user's login
+            } 
+            else {
+               System.out.println("Invalid login credentials.");
+               return null;
+            }
+
+         }catch (Exception e) {
+               System.err.println(e.getMessage());
+               return null;
+            }
+            
+   }
 
 // Rest of the functions definition go in here
 
-   public static void viewProfile(PizzaStore esql) {}
+   public static void viewProfile(PizzaStore esql, String login) {}
    public static void updateProfile(PizzaStore esql) {}
    public static void viewMenu(PizzaStore esql) {}
-   public static void placeOrder(PizzaStore esql) {}
+
+   public static void placeOrder(PizzaStore esql, String login) {
+      try {
+
+         System.out.print("Enter the StoreID of the Papa's Pizzaeria Location you'd like to order from: ");
+         int storeID = Integer.parseInt(in.readLine());
+
+         List<String> itemNames = new ArrayList<>();
+         List<Integer> quantities = new ArrayList<>();
+         double totalPrice = 0.0;
+
+         String menuQuery = String.format("SELECT itemName, price FROM Items");
+         List<List<String>> menuItems = esql.executeQueryAndReturnResult(menuQuery);
+         if (menuItems.isEmpty()) {
+               System.out.println("The selected store has no menu items available.");
+               return;
+         }
+
+         boolean ordering = true;
+         while (ordering) {
+               System.out.print("Enter the item name you want to order (or type 'done' to finish): ");
+               String itemName = in.readLine().trim();
+               if (itemName.equalsIgnoreCase("done")) {
+                  ordering = false;
+                  continue;
+               }
+
+               System.out.print("How many " + itemName + "s do you want to order?: ");
+               int quantity = Integer.parseInt(in.readLine().trim());
+
+               // Verify item exists and calculate price
+               boolean itemFound = false;
+               for (List<String> item : menuItems) {
+                  if (item.get(0).equalsIgnoreCase(itemName)) {
+                     double price = Double.parseDouble(item.get(1)) * quantity;
+                     totalPrice += price;
+                     itemNames.add(itemName);
+                     quantities.add(quantity);
+                     System.out.println(quantity + " x " + itemName + " added to the order (Subtotal: $" + price + ")");
+                     itemFound = true;
+                     break;
+                  }
+               }
+
+               if (!itemFound) {
+                  System.out.println("Item not found in the menu. Please try again.");
+               }
+         }
+
+         if (itemNames.isEmpty()) {
+               System.out.println("No items were added to the order. Cancelling the order.");
+               return;
+         }
+
+         // Step 5: Display total price
+         System.out.println("Your total order price is: $" + totalPrice);
+
+         // LocalDateTime orderTimestamp = LocalDateTime.now();
+         DateTimeFormatter orderTimestamp = DateTimeFormatter.ofPattern("yyy-MM-dd HH:mm:ss");
+
+         int orderID = esql.getCurrSeqVal("FoodOrder");
+
+         // Step 6: Insert order into the FoodOrder table
+         // String orderInsertQuery = "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, "orderTimestamp", orderStatus) VALUES ('" + orderID + "', '" + login + "', '" + storeID + "', '" + totalPrice + "', '" + "'\"" + orderTimestamp + "\"" + "');";
+         String orderInsertQuery = "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, \"orderTimestamp\", orderStatus) VALUES ('" + orderID + "', '" + login + "', '" + storeID + "', '" + totalPrice + "', '" + orderTimestamp + "', '" + "incomplete" + "');";
+         esql.executeUpdate(orderInsertQuery);
+
+         // Get the orderID for the newly created order
+         // int orderID = esql.getCurrSeqVal("FoodOrder_orderID_seq");
+
+         // Step 7: Insert items into the ItemsInOrder table
+         for (int i = 0; i < itemNames.size(); i++) {
+               String itemInsertQuery = String.format(
+                  "INSERT INTO ItemsInOrder (orderID, itemName, quantity) VALUES (%d, '%s', %d)",
+                  orderID, itemNames.get(i), quantities.get(i));
+               esql.executeUpdate(itemInsertQuery);
+         }
+
+         // Confirm order placement
+         System.out.println("Order placed was successfully at Papa's Pizzaeria! Your Order ID is: " + orderID);
+
+      } catch (Exception e) {
+         System.err.println("Error while placing the order: " + e.getMessage());
+      }
+   }
    public static void viewAllOrders(PizzaStore esql) {}
    public static void viewRecentOrders(PizzaStore esql) {}
    public static void viewOrderInfo(PizzaStore esql) {}
