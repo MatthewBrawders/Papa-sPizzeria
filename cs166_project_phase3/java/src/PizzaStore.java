@@ -578,73 +578,81 @@ public class PizzaStore {
 
    public static void placeOrder(PizzaStore esql, String authorisedUser) {
       try {
-         // Get the next orderID
-         String maxOrderIdQuery = "SELECT COALESCE(MAX(orderID), 10000) FROM FoodOrder;";
-         List<List<String>> result = esql.executeQueryAndReturnResult(maxOrderIdQuery);
-         int nextOrderId = Integer.parseInt(result.get(0).get(0)) + 1;
-
-         // Get the store ID
-         System.out.print("Enter the store ID for your order: ");
-         int storeID = Integer.parseInt(in.readLine().trim());
-
-         // Get items in the order
-         System.out.print("Enter the total number of different items in your order: ");
-         int itemCount = Integer.parseInt(in.readLine().trim());
-         double totalPrice = 0.0;
-
-         // Use a map to aggregate quantities of duplicate items
-         Map<String, Integer> itemQuantities = new HashMap<>();
-
-         for (int i = 0; i < itemCount; i++) {
-               System.out.print("Enter item name: ");
-               String itemName = in.readLine().trim();
-
-               System.out.print("Enter quantity: ");
-               int quantity = Integer.parseInt(in.readLine().trim());
-
-               // Add or update the quantity in the map
-               itemQuantities.put(itemName, itemQuantities.getOrDefault(itemName, 0) + quantity);
-
-               // Check the price of the item (only for calculating total price)
-               String priceQuery = String.format("SELECT price FROM Items WHERE itemName = '%s';", itemName.replace("'", "''"));
-               List<List<String>> priceResult = esql.executeQueryAndReturnResult(priceQuery);
-
-               if (priceResult.isEmpty()) {
+          // Get the next orderID
+          String maxOrderIdQuery = "SELECT COALESCE(MAX(orderID), 10000) FROM FoodOrder;";
+          List<List<String>> result = esql.executeQueryAndReturnResult(maxOrderIdQuery);
+          int nextOrderId = Integer.parseInt(result.get(0).get(0)) + 1;
+  
+          // Get the store ID
+          System.out.print("Enter the store ID for your order: ");
+          int storeID = Integer.parseInt(in.readLine().trim());
+  
+          double totalPrice = 0.0;
+  
+          // Use a map to aggregate quantities of duplicate items
+          Map<String, Integer> itemQuantities = new HashMap<>();
+  
+          boolean moreItems = true;
+          while (moreItems) {
+              System.out.print("Enter item name: ");
+              String itemName = in.readLine().trim();
+  
+              System.out.print("Enter quantity: ");
+              int quantity = Integer.parseInt(in.readLine().trim());
+  
+              // Add or update the quantity in the map
+              itemQuantities.put(itemName, itemQuantities.getOrDefault(itemName, 0) + quantity);
+  
+              // Check the price of the item (only for calculating total price)
+              String priceQuery = String.format("SELECT price FROM Items WHERE itemName = '%s';", itemName.replace("'", "''"));
+              List<List<String>> priceResult = esql.executeQueryAndReturnResult(priceQuery);
+  
+              if (priceResult.isEmpty()) {
                   System.out.println("Item not found in the menu: " + itemName);
                   return;
-               }
-
-               double itemPrice = Double.parseDouble(priceResult.get(0).get(0));
-               totalPrice += itemPrice * quantity;
-         }
-
-         // Insert the order into FoodOrder table
-         String orderTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
-         String insertOrderQuery = String.format(
-               "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, orderTimestamp, orderStatus) " +
-               "VALUES (%d, '%s', %d, %.2f, '%s', 'Pending');",
-               nextOrderId, authorisedUser.replace("'", "''"), storeID, totalPrice, orderTimestamp
-         );
-         esql.executeUpdate(insertOrderQuery);
-
-         // Insert items into ItemsInOrder table
-         for (Map.Entry<String, Integer> entry : itemQuantities.entrySet()) {
-               String itemName = entry.getKey();
-               int quantity = entry.getValue();
-
-               String insertItemQuery = String.format(
+              }
+  
+              double itemPrice = Double.parseDouble(priceResult.get(0).get(0));
+              totalPrice += itemPrice * quantity;
+  
+              // Ask if the user wants to add more items
+              System.out.println("Anything else you would like to order?");
+              System.out.println("1: Yes");
+              System.out.println("2: No");
+              int choice = Integer.parseInt(in.readLine().trim());
+              if (choice == 2) {
+                  moreItems = false;
+              }
+          }
+  
+          // Insert the order into FoodOrder table
+          String orderTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+          String insertOrderQuery = String.format(
+              "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, orderTimestamp, orderStatus) " +
+              "VALUES (%d, '%s', %d, %.2f, '%s', 'Pending');",
+              nextOrderId, authorisedUser.replace("'", "''"), storeID, totalPrice, orderTimestamp
+          );
+          esql.executeUpdate(insertOrderQuery);
+  
+          // Insert items into ItemsInOrder table
+          for (Map.Entry<String, Integer> entry : itemQuantities.entrySet()) {
+              String itemName = entry.getKey();
+              int quantity = entry.getValue();
+  
+              String insertItemQuery = String.format(
                   "INSERT INTO ItemsInOrder (orderID, itemName, quantity) VALUES (%d, '%s', %d);",
                   nextOrderId, itemName.replace("'", "''"), quantity
-               );
-               esql.executeUpdate(insertItemQuery);
-         }
-
-         System.out.println("Order placed successfully! Total price: $" + totalPrice);
-
+              );
+              esql.executeUpdate(insertItemQuery);
+          }
+  
+          System.out.println("Order placed successfully! Total price: $" + totalPrice);
+  
       } catch (Exception e) {
-         System.err.println("Error placing order: " + e.getMessage());
+          System.err.println("Error placing order: " + e.getMessage());
       }
-   }
+  }
+  
 
    public static void viewAllOrders(PizzaStore esql, String authorisedUser) {
       try {
