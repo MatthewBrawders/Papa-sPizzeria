@@ -522,21 +522,16 @@ public class PizzaStore {
                return;
          }
 
-         // Step 5: Display total price
          System.out.println("Your total order price is: $" + totalPrice);
 
-         // LocalDateTime orderTimestamp = LocalDateTime.now();
-         DateTimeFormatter orderTimestamp = DateTimeFormatter.ofPattern("yyy-MM-dd HH:mm:ss");
+         DateTimeFormatter orderTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-         int orderID = esql.getCurrSeqVal("FoodOrder");
+         String nextOrderIDQuery = "SELECT MAX(orderID) + 1 AS nextOrderID FROM FoodOrder";
+         List<List<String>> result = esql.executeQueryAndReturnResult(nextOrderIDQuery);
+         int orderID = result.isEmpty() ? 10000 : Integer.parseInt(result.get(0).get(0));
 
-         // Step 6: Insert order into the FoodOrder table
-         // String orderInsertQuery = "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, "orderTimestamp", orderStatus) VALUES ('" + orderID + "', '" + login + "', '" + storeID + "', '" + totalPrice + "', '" + "'\"" + orderTimestamp + "\"" + "');";
          String orderInsertQuery = "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, \"orderTimestamp\", orderStatus) VALUES ('" + orderID + "', '" + login + "', '" + storeID + "', '" + totalPrice + "', '" + orderTimestamp + "', '" + "incomplete" + "');";
          esql.executeUpdate(orderInsertQuery);
-
-         // Get the orderID for the newly created order
-         // int orderID = esql.getCurrSeqVal("FoodOrder_orderID_seq");
 
          // Step 7: Insert items into the ItemsInOrder table
          for (int i = 0; i < itemNames.size(); i++) {
@@ -553,6 +548,7 @@ public class PizzaStore {
          System.err.println("Error while placing the order: " + e.getMessage());
       }
    }
+   
    public static void viewAllOrders(PizzaStore esql) {}
    public static void viewRecentOrders(PizzaStore esql) {}
    public static void viewOrderInfo(PizzaStore esql) {}
