@@ -646,8 +646,6 @@ public class PizzaStore {
       }
    }
 
-  
-  
    public static void viewAllOrders(PizzaStore esql, String authorisedUser) {
       try {
           String query = String.format(
