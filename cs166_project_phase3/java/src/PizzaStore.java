@@ -646,7 +646,7 @@ public class PizzaStore {
               esql.executeUpdate(insertItemQuery);
           }
   
-          System.out.println("Order placed successfully! Total price: $" + totalPrice);
+          System.out.println("Order placed successfully! Total price: $" + totalPrice + "\nYour OrderID is " + nextOrderId);
   
       } catch (Exception e) {
           System.err.println("Error placing order: " + e.getMessage());
