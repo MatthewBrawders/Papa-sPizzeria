@@ -288,8 +288,8 @@ public class PizzaStore {
                 System.out.println(".........................");
                 System.out.println("20. Log out");
                 switch (readChoice()){
-                   case 1: viewProfile(esql); break;
-                   case 2: updateProfile(esql); break;
+                   case 1: viewProfile(esql, authorisedUser); break;
+                   case 2: updateProfile(esql, authorisedUser); break;
                    case 3: viewMenu(esql); break;
                    case 4: placeOrder(esql); break;
                    case 5: viewAllOrders(esql); break;
@@ -463,9 +463,123 @@ public class PizzaStore {
 
 // Rest of the functions definition go in here
 
-   public static void viewProfile(PizzaStore esql) {}
-   public static void updateProfile(PizzaStore esql) {}
-   public static void viewMenu(PizzaStore esql) {}
+   public static void viewProfile(PizzaStore esql, String authorisedUser) {
+      try {
+         // Use authorisedUser directly in the query
+         String query = String.format("SELECT * FROM Users WHERE login='%s'", authorisedUser);
+
+         // Execute the query and get the result
+         List<List<String>> result = esql.executeQueryAndReturnResult(query);
+
+         // Check if the user's profile exists
+         if (result.isEmpty()) {
+            System.out.println("No user profile found for the current login.");
+         } else {
+            // Display all user details (username, role, etc.)
+            System.out.println("User Profile:");
+            System.out.println("Login: " + result.get(0).get(0)); // Username
+            System.out.println("Password: " + result.get(0).get(1)); // Password
+            System.out.println("Role: " + result.get(0).get(2)); // Role
+            System.out.println("Favorite Items: " + result.get(0).get(3)); // Favorite Items
+            System.out.println("Phone Number: " + result.get(0).get(4)); // Phone Number
+         }
+      } catch (Exception e) {
+         System.err.println("An error occurred: " + e.getMessage());
+      }
+   }
+
+   
+   public static void updateProfile(PizzaStore esql, String authorisedUser) {
+      try {
+  
+          // Fetch the current profile information to show the user (optional)
+          String query = String.format("SELECT * FROM Users WHERE login = '%s';", authorisedUser);
+          esql.executeQuery(query); // Run the query to get current user details
+          // Optional: Fetch and display current user information (You can also use a ResultSet)
+          // Example: If found, display current profile
+  
+          System.out.println("Current profile details: ");
+          // Display current profile information (e.g., using a ResultSet to get the user's details)
+          // Sample: "login: currentLogin, phoneNum: currentPhoneNum, favoriteItems: currentFavoriteItems"
+          
+          // Ask for new values to update
+          System.out.println("Enter new password (Leave blank to keep the same): ");
+          String newPassword = in.readLine();
+  
+          System.out.println("Enter new phone number (Leave blank to keep the same): ");
+          String newPhoneNum = in.readLine();
+  
+          System.out.println("Enter new favorite items (Leave blank to keep the same): ");
+          String newFavoriteItems = in.readLine();
+  
+          // Construct the SQL update query, only updating fields that are not blank
+          String updateQuery = "UPDATE Users SET ";
+          boolean first = true;
+  
+          if (newPassword != null && !newPassword.isEmpty()) {
+              updateQuery += "password = '" + newPassword + "'";
+              first = false;
+          }
+  
+          if (newPhoneNum != null && !newPhoneNum.isEmpty()) {
+              if (!first) updateQuery += ", ";
+              updateQuery += "phoneNum = '" + newPhoneNum + "'";
+              first = false;
+          }
+  
+          if (newFavoriteItems != null && !newFavoriteItems.isEmpty()) {
+              if (!first) updateQuery += ", ";
+              updateQuery += "favoriteItems = '" + newFavoriteItems + "'";
+          }
+  
+          // Close the update statement
+          updateQuery += " WHERE login = '" + currentLogin + "';";
+  
+          // Execute the query to update the user profile in the database
+          esql.executeUpdate(updateQuery);
+  
+          System.out.println("Your profile has been successfully updated.");
+          
+      } catch (Exception e) {
+          System.err.println("Error updating profile: " + e.getMessage());
+      }
+   }
+
+   public static void viewMenu(PizzaStore esql) {
+      try {
+         // Step 1: Query the Items table to get all the items
+         String query = "SELECT itemName, ingredients, typeOfItem, price, description FROM Items;";
+         List<List<String>> results = esql.executeQueryAndReturnResult(query);
+
+         // Step 2: Check if there are items in the menu
+         if (results.isEmpty()) {
+               System.out.println("The menu is empty. No items available.");
+               return;
+         }
+
+         // Step 3: Display the menu items
+         System.out.println("---- Menu ----");
+         for (List<String> item : results) {
+               String itemName = item.get(0);
+               String ingredients = item.get(1);
+               String typeOfItem = item.get(2);
+               String price = item.get(3);
+               String description = item.get(4);
+
+               System.out.println("Item Name: " + itemName);
+               System.out.println("Ingredients: " + ingredients);
+               System.out.println("Type: " + typeOfItem);
+               System.out.println("Price: $" + price);
+               System.out.println("Description: " + description);
+               System.out.println("-----------------------");
+         }
+
+      } catch (Exception e) {
+         System.err.println("Error displaying the menu: " + e.getMessage());
+      }
+   }
+
+
    public static void placeOrder(PizzaStore esql) {}
    public static void viewAllOrders(PizzaStore esql) {}
    public static void viewRecentOrders(PizzaStore esql) {}
