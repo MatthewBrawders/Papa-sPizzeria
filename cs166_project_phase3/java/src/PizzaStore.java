@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.lang.Math;
 import java.util.Scanner;
 
@@ -292,10 +294,10 @@ public class PizzaStore {
                    case 1: viewProfile(esql, authorisedUser); break;
                    case 2: updateProfile(esql, authorisedUser); break;
                    case 3: viewMenu(esql); break;
-                   case 4: placeOrder(esql); break;
-                   case 5: viewAllOrders(esql); break;
-                   case 6: viewRecentOrders(esql); break;
-                   case 7: viewOrderInfo(esql); break;
+                   case 4: placeOrder(esql, authorisedUser); break;
+                   case 5: viewAllOrders(esql, authorisedUser); break;
+                   case 6: viewRecentOrders(esql, authorisedUser); break;
+                   case 7: viewOrderInfo(esql, authorisedUser); break;
                    case 8: viewStores(esql); break;
                    case 9: updateOrderStatus(esql, authorisedUser); break;
                    case 10: updateMenu(esql, authorisedUser); break;
@@ -574,12 +576,132 @@ public class PizzaStore {
       }
    }   
 
+   public static void placeOrder(PizzaStore esql, String authorisedUser) {
+      try {
+         // Get the next orderID
+         String maxOrderIdQuery = "SELECT COALESCE(MAX(orderID), 10000) FROM FoodOrder;";
+         List<List<String>> result = esql.executeQueryAndReturnResult(maxOrderIdQuery);
+         int nextOrderId = Integer.parseInt(result.get(0).get(0)) + 1;
 
-   public static void placeOrder(PizzaStore esql) {}
-   public static void viewAllOrders(PizzaStore esql) {}
-   public static void viewRecentOrders(PizzaStore esql) {}
-   public static void viewOrderInfo(PizzaStore esql) {}
+         // Get the store ID
+         System.out.print("Enter the store ID for your order: ");
+         int storeID = Integer.parseInt(in.readLine().trim());
 
+         // Get items in the order
+         System.out.print("Enter the total number of different items in your order: ");
+         int itemCount = Integer.parseInt(in.readLine().trim());
+         double totalPrice = 0.0;
+
+         // Use a map to aggregate quantities of duplicate items
+         Map<String, Integer> itemQuantities = new HashMap<>();
+
+         for (int i = 0; i < itemCount; i++) {
+               System.out.print("Enter item name: ");
+               String itemName = in.readLine().trim();
+
+               System.out.print("Enter quantity: ");
+               int quantity = Integer.parseInt(in.readLine().trim());
+
+               // Add or update the quantity in the map
+               itemQuantities.put(itemName, itemQuantities.getOrDefault(itemName, 0) + quantity);
+
+               // Check the price of the item (only for calculating total price)
+               String priceQuery = String.format("SELECT price FROM Items WHERE itemName = '%s';", itemName.replace("'", "''"));
+               List<List<String>> priceResult = esql.executeQueryAndReturnResult(priceQuery);
+
+               if (priceResult.isEmpty()) {
+                  System.out.println("Item not found in the menu: " + itemName);
+                  return;
+               }
+
+               double itemPrice = Double.parseDouble(priceResult.get(0).get(0));
+               totalPrice += itemPrice * quantity;
+         }
+
+         // Insert the order into FoodOrder table
+         String orderTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+         String insertOrderQuery = String.format(
+               "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, orderTimestamp, orderStatus) " +
+               "VALUES (%d, '%s', %d, %.2f, '%s', 'Pending');",
+               nextOrderId, authorisedUser.replace("'", "''"), storeID, totalPrice, orderTimestamp
+         );
+         esql.executeUpdate(insertOrderQuery);
+
+         // Insert items into ItemsInOrder table
+         for (Map.Entry<String, Integer> entry : itemQuantities.entrySet()) {
+               String itemName = entry.getKey();
+               int quantity = entry.getValue();
+
+               String insertItemQuery = String.format(
+                  "INSERT INTO ItemsInOrder (orderID, itemName, quantity) VALUES (%d, '%s', %d);",
+                  nextOrderId, itemName.replace("'", "''"), quantity
+               );
+               esql.executeUpdate(insertItemQuery);
+         }
+
+         System.out.println("Order placed successfully! Total price: $" + totalPrice);
+
+      } catch (Exception e) {
+         System.err.println("Error placing order: " + e.getMessage());
+      }
+   }
+
+  
+  
+   public static void viewAllOrders(PizzaStore esql, String authorisedUser) {
+      try {
+          String query = String.format(
+              "SELECT * FROM FoodOrder WHERE login = '%s' ORDER BY orderTimestamp DESC;",
+              authorisedUser.replace("'", "''")
+          );
+          esql.executeQueryAndPrintResult(query);
+      } catch (Exception e) {
+          System.err.println("Error fetching orders: " + e.getMessage());
+      }
+  }
+
+   public static void viewRecentOrders(PizzaStore esql, String authorisedUser) {
+      try {
+            String query = String.format(
+               "SELECT * FROM FoodOrder WHERE login = '%s' ORDER BY orderTimestamp DESC LIMIT 5;",
+               authorisedUser.replace("'", "''")
+            );
+            esql.executeQueryAndPrintResult(query);
+      } catch (Exception e) {
+            System.err.println("Error fetching recent orders: " + e.getMessage());
+      }
+   }
+
+  
+   public static void viewOrderInfo(PizzaStore esql, String authorisedUser) {
+      try {
+            System.out.print("Enter the Order ID to view details: ");
+            int orderID = Integer.parseInt(in.readLine().trim());
+   
+            String orderDetailsQuery = String.format(
+               "SELECT * FROM FoodOrder WHERE orderID = %d AND login = '%s';",
+               orderID, authorisedUser.replace("'", "''")
+            );
+   
+            int orderCount = esql.executeQuery(orderDetailsQuery);
+            if (orderCount == 0) {
+               System.out.println("Order not found or does not belong to the user.");
+               return;
+            }
+   
+            String itemsQuery = String.format(
+               "SELECT itemName, quantity FROM ItemsInOrder WHERE orderID = %d;",
+               orderID
+            );
+            System.out.println("Order Details:");
+            esql.executeQueryAndPrintResult(orderDetailsQuery);
+            System.out.println("Items in Order:");
+            esql.executeQueryAndPrintResult(itemsQuery);
+         } catch (Exception e) {
+            System.err.println("Error fetching order info: " + e.getMessage());
+         }
+   }
+  
 
    public static void viewStores(PizzaStore esql) {
       try {
