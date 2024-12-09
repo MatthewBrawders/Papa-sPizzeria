@@ -12,6 +12,7 @@
 
 
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.sql.ResultSet;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.lang.Math;
 import java.util.Scanner;
+import com.important.utils.Credentials;
 
 /**
  * This class defines a simple embedded SQL utility class that is designed to
@@ -261,9 +263,15 @@ public class PizzaStore {
             System.out.println("2. Log in");
             System.out.println("9. < EXIT");
             String authorisedUser = null;
+            String authorisedPassword = null;
             switch (readChoice()){
                case 1: CreateUser(esql); break;
-               case 2: authorisedUser = LogIn(esql); break;
+               case 2: 
+                        Credentials creds = LogIn(esql);
+                        if (creds != null) {
+                           authorisedUser = creds.user;
+                           authorisedPassword = creds.password;
+                        }
                case 9: keepon = false; break;
                default : System.out.println("Unrecognized choice!"); break;
             }//end switch
@@ -291,17 +299,17 @@ public class PizzaStore {
                 System.out.println(".........................");
                 System.out.println("20. Log out");
                 switch (readChoice()){
-                   case 1: viewProfile(esql, authorisedUser); break;
-                   case 2: updateProfile(esql, authorisedUser); break;
+                   case 1: viewProfile(esql, creds); break;
+                   case 2: updateProfile(esql, creds); break;
                    case 3: viewMenu(esql); break;
-                   case 4: placeOrder(esql, authorisedUser); break;
-                   case 5: viewAllOrders(esql, authorisedUser); break;
-                   case 6: viewRecentOrders(esql, authorisedUser); break;
-                   case 7: viewOrderInfo(esql, authorisedUser); break;
+                   case 4: placeOrder(esql, creds); break;
+                   case 5: viewAllOrders(esql, creds); break;
+                   case 6: viewRecentOrders(esql, creds); break;
+                   case 7: viewOrderInfo(esql, creds); break;
                    case 8: viewStores(esql); break;
-                   case 9: updateOrderStatus(esql, authorisedUser); break;
-                   case 10: updateMenu(esql, authorisedUser); break;
-                   case 11: updateUser(esql, authorisedUser); break;
+                   case 9: updateOrderStatus(esql, creds); break;
+                   case 10: updateMenu(esql, creds); break;
+                   case 11: updateUser(esql, creds); break;
 
 
 
@@ -437,7 +445,7 @@ public class PizzaStore {
     * Check log in credentials for an existing user
     * @return User login or null is the user does not exist
     **/
-   public static String LogIn(PizzaStore esql){
+   public static Credentials LogIn(PizzaStore esql){
       try {
             System.out.print("Enter Username: ");
             String login = in.readLine();
@@ -450,7 +458,7 @@ public class PizzaStore {
 
             if (userCount > 0) {
                System.out.println("Login successful!");
-               return login; // Return the logged-in user's login
+               return new Credentials(login, password);
             } 
             else {
                System.out.println("Invalid login credentials.");
@@ -466,10 +474,10 @@ public class PizzaStore {
 
 // Rest of the functions definition go in here
 
-   public static void viewProfile(PizzaStore esql, String authorisedUser) {
+   public static void viewProfile(PizzaStore esql, Credentials creds) {
       try {
-         // Use authorisedUser directly in the query
-         String query = String.format("SELECT * FROM Users WHERE login='%s'", authorisedUser);
+         // Use the user field from the Credentials object in the query
+         String query = String.format("SELECT * FROM Users WHERE login='%s' AND password='%s'", creds.getUser(), creds.getPassword());
 
          // Execute the query and get the result
          List<List<String>> result = esql.executeQueryAndReturnResult(query);
@@ -491,11 +499,12 @@ public class PizzaStore {
       }
    }
 
+
    
-   public static void updateProfile(PizzaStore esql, String authorisedUser) {
+   public static void updateProfile(PizzaStore esql, Credentials creds) {
       try {
          // Fetch the current profile information to show the user
-         String query = String.format("SELECT * FROM Users WHERE login='%s';", authorisedUser);
+         String query = String.format("SELECT * FROM Users WHERE login='%s' AND password='%s'", creds.getUser(), creds.getPassword());
          List<List<String>> currentDetails = esql.executeQueryAndReturnResult(query);
    
          // Display current profile details
@@ -539,7 +548,7 @@ public class PizzaStore {
             updateQuery += "favoriteItems = '" + newFavoriteItems + "'";
          }
    
-         updateQuery += String.format(" WHERE login='%s';", authorisedUser);
+         updateQuery = String.format("UPDATE Users SET column_name = 'new_value' WHERE login='%s' AND password='%s';", creds.getUser(), creds.getPassword());
    
          // Execute the query
          esql.executeUpdate(updateQuery);
@@ -576,7 +585,7 @@ public class PizzaStore {
       }
    }   
 
-   public static void placeOrder(PizzaStore esql, String authorisedUser) {
+   public static void placeOrder(PizzaStore esql, Credentials creds) {
       try {
           // Get the next orderID
           String maxOrderIdQuery = "SELECT COALESCE(MAX(orderID), 10000) FROM FoodOrder;";
@@ -630,7 +639,7 @@ public class PizzaStore {
           String insertOrderQuery = String.format(
               "INSERT INTO FoodOrder (orderID, login, storeID, totalPrice, orderTimestamp, orderStatus) " +
               "VALUES (%d, '%s', %d, %.2f, '%s', 'Pending');",
-              nextOrderId, authorisedUser.replace("'", "''"), storeID, totalPrice, orderTimestamp
+              nextOrderId, creds.getUser().replace("'", "''"), storeID, totalPrice, orderTimestamp
           );
           esql.executeUpdate(insertOrderQuery);
   
@@ -654,32 +663,77 @@ public class PizzaStore {
   }
   
 
-   public static void viewAllOrders(PizzaStore esql, String authorisedUser) {
+  public static void viewAllOrders(PizzaStore esql, Credentials creds) {
       try {
-          String query = String.format(
-              "SELECT * FROM FoodOrder WHERE login = '%s' ORDER BY orderTimestamp DESC;",
-              authorisedUser.replace("'", "''")
-          );
-          esql.executeQueryAndPrintResult(query);
-      } catch (Exception e) {
-          System.err.println("Error fetching orders: " + e.getMessage());
-      }
-  }
+         // Define the query with placeholders
+         String query = "SELECT * FROM FoodOrder WHERE login = ? AND password = ? ORDER BY orderTimestamp DESC;";
+         
+         // Create a prepared statement to prevent SQL injection
+         PreparedStatement pstmt = esql.getConnection().prepareStatement(query);
+         pstmt.setString(1, creds.getUser());       // Set login
+         pstmt.setString(2, creds.getPassword());  // Set password
+         
+         // Execute the query
+         ResultSet result = pstmt.executeQuery();
+         
+         // Check if results exist
+         if (!result.isBeforeFirst()) { // Checks if the ResultSet is empty
+            System.out.println("No orders found for the provided login and password.");
+            return;
+         }
 
-   public static void viewRecentOrders(PizzaStore esql, String authorisedUser) {
-      try {
-            String query = String.format(
-               "SELECT * FROM FoodOrder WHERE login = '%s' ORDER BY orderTimestamp DESC LIMIT 5;",
-               authorisedUser.replace("'", "''")
-            );
-            esql.executeQueryAndPrintResult(query);
+         // Process and print the results
+         System.out.println("All Orders:");
+         while (result.next()) {
+            System.out.println("Order ID: " + result.getInt("orderID"));
+            System.out.println("Login: " + result.getString("login"));
+            System.out.println("Order Timestamp: " + result.getTimestamp("orderTimestamp"));
+            System.out.println("Total Cost: $" + result.getDouble("totalCost"));
+            System.out.println("-------------------------------");
+         }
       } catch (Exception e) {
-            System.err.println("Error fetching recent orders: " + e.getMessage());
+         System.err.println("Error fetching orders: " + e.getMessage());
       }
    }
 
+
+
+   public static void viewRecentOrders(PizzaStore esql, Credentials creds) {
+      try {
+          // Define the query with placeholders
+          String query = "SELECT * FROM FoodOrder WHERE login = ? AND password = ? ORDER BY orderTimestamp DESC LIMIT 5;";
+          
+          // Create a prepared statement to prevent SQL injection
+          PreparedStatement pstmt = esql.getConnection().prepareStatement(query);
+          pstmt.setString(1, creds.getUser());       // Set login
+          pstmt.setString(2, creds.getPassword());  // Set password
+          
+          // Execute the query
+          ResultSet result = pstmt.executeQuery();
+          
+          // Check if results exist
+          if (!result.isBeforeFirst()) { // Checks if the ResultSet is empty
+              System.out.println("No recent orders found for the provided login and password.");
+              return;
+          }
   
-   public static void viewOrderInfo(PizzaStore esql, String authorisedUser) {
+          // Process and print the results
+          System.out.println("Recent Orders (Last 5):");
+          while (result.next()) {
+              System.out.println("Order ID: " + result.getInt("orderID"));
+              System.out.println("Login: " + result.getString("login"));
+              System.out.println("Order Timestamp: " + result.getTimestamp("orderTimestamp"));
+              System.out.println("Total Cost: $" + result.getDouble("totalCost"));
+              System.out.println("-------------------------------");
+          }
+      } catch (Exception e) {
+          System.err.println("Error fetching recent orders: " + e.getMessage());
+      }
+   }
+  
+
+  
+   public static void viewOrderInfo(PizzaStore esql, Credentials creds) {
       try {
             System.out.print("Enter the Order ID to view details: ");
             int orderID = Integer.parseInt(in.readLine().trim());
@@ -744,7 +798,7 @@ public class PizzaStore {
       }
    }
 
-   public static void updateOrderStatus(PizzaStore esql, String login) {
+   public static void updateOrderStatus(PizzaStore esql, Credentials creds) {
       // Use a single Scanner object for the whole program if tied to System.in
       Scanner scanner = new Scanner(System.in);  // Create Scanner object for input
   
@@ -789,16 +843,27 @@ public class PizzaStore {
   }
   
 
-   public static void updateMenu(PizzaStore esql, String authorisedUser) {
+   public static void updateMenu(PizzaStore esql, Credentials creds) {
       try {
          // Step 1: Check if the authorisedUser is a manager
-         String roleQuery = String.format("SELECT role FROM Users WHERE login='%s';", authorisedUser);
-         List<List<String>> roleResult = esql.executeQueryAndReturnResult(roleQuery);
-   
-         if (roleResult.isEmpty() || !"manager".equalsIgnoreCase(roleResult.get(0).get(0).trim())) {
-            System.out.println("Access denied. Only managers can update the menu.");
-            return;
+         String roleQuery = "SELECT role FROM Users WHERE login = ? AND password = ?;";
+         
+         // Create a prepared statement
+         PreparedStatement pstmt = esql.getConnection().prepareStatement(roleQuery);
+         pstmt.setString(1, creds.getUser());       // Set login
+         pstmt.setString(2, creds.getPassword());  // Set password
+         
+         // Execute the query and get the result
+         ResultSet roleResult = pstmt.executeQuery();
+         
+         // Check if the user exists and their role
+         if (!roleResult.next() || !"manager".equalsIgnoreCase(roleResult.getString("role").trim())) {
+               System.out.println("Access denied. Only managers can update the menu.");
+               return;
          }
+         
+         // Proceed with menu update logic if the user is a manager
+         System.out.println("Access granted. Proceeding with menu update...");
    
          // Step 2: Display the current menu for reference
          String menuQuery = "SELECT itemName, ingredients, typeOfItem, price, description FROM Items;";
@@ -920,15 +985,23 @@ public class PizzaStore {
       }
    }
 
-   public static void updateUser(PizzaStore esql, String authorisedUser) {
+   public static void updateUser(PizzaStore esql, Credentials creds) {
       try {
          // Step 1: Check if the authorisedUser is a manager
-         String roleQuery = String.format("SELECT role FROM Users WHERE login='%s';", authorisedUser);
-         List<List<String>> roleResult = esql.executeQueryAndReturnResult(roleQuery);
-
-         if (roleResult.isEmpty() || !"manager".equalsIgnoreCase(roleResult.get(0).get(0).trim())) {
-            System.out.println("Access denied. Only managers can update user details.");
-            return;
+         String roleQuery = "SELECT role FROM Users WHERE login = ? AND password = ?;";
+         
+         // Create a prepared statement
+         PreparedStatement pstmt = esql.getConnection().prepareStatement(roleQuery);
+         pstmt.setString(1, creds.getUser());       // Set login
+         pstmt.setString(2, creds.getPassword());  // Set password
+         
+         // Execute the query and get the result
+         ResultSet roleResult = pstmt.executeQuery();
+         
+         // Check if the user exists and their role
+         if (!roleResult.next() || !"manager".equalsIgnoreCase(roleResult.getString("role").trim())) {
+               System.out.println("Access denied. Only managers can update the menu.");
+               return;
          }
 
          // Step 2: Allow manager to select a user to update
