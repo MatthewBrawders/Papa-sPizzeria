@@ -361,7 +361,7 @@ public class PizzaStore {
       String login;
       String password;
       String role = "customer";
-      String favoriteItems;
+      String favoriteItems = "";
       String phoneNum;
 
       BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
@@ -396,18 +396,7 @@ public class PizzaStore {
          }
       } while (true);
 
-      System.out.print("That's a very safe password! Now we would like to know ourselves... What's your favorite item on our menu?\n");
-      do {
-         System.out.print("Favorite Item: ");
-         try {
-               favoriteItems = in.readLine();
-               break;
-         } catch (IOException e) {
-               System.out.println("An error occurred while reading your input. Please try again.");
-         }
-      } while (true);
-
-      System.out.print("Lastly, all we need is your phone number to send you discounts and deals!\n");
+      System.out.print("That's a very safe password! Lastly, all we need is your phone number <###-###-####> to send you discounts and deals!\n");
       do {
          System.out.print("Phone Number: ");
          try {
@@ -427,7 +416,7 @@ public class PizzaStore {
          esql.executeUpdate(query);
          System.out.println("User created successfully!");
       } catch (Exception e) {
-         System.err.println("Error inserting user into database: " + e.getMessage());
+         System.err.println("\nWhoops! Looks like that username was already taken :/.\nTry again with a new username.\n\n" + e.getMessage());
       }
    }
 
