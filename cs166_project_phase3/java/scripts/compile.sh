@@ -10,4 +10,3 @@ javac -d $DIR/../classes -cp $DIR/../classes $DIR/../src/PizzaStore.java
 # Run the Java program
 java -cp $DIR/../classes:$DIR/../lib/pg73jdbc3.jar PizzaStore "${USER}_project_phase_3_DB" $PGPORT $USER
 
-
