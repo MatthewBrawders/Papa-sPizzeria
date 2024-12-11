@@ -1,5 +1,3 @@
-package com.important.utils;
-
 public class Credentials {
     private String user;
     private String password;
@@ -17,3 +15,4 @@ public class Credentials {
         return password;
     }
 }
+
